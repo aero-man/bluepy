@@ -88,28 +88,35 @@ class BTLEGattError(BTLEException):
 class UUID:
     def __init__(self, val, commonName=None):
         '''We accept: 32-digit hex strings, with and without '-' characters,
-           4 to 8 digit hex strings, and integers'''
-        if isinstance(val, int):
-            if (val < 0) or (val > 0xFFFFFFFF):
-                raise ValueError(
-                    "Short form UUIDs must be in range 0..0xFFFFFFFF")
-            val = "%04X" % val
-        elif isinstance(val, self.__class__):
-            val = str(val)
-        else:
-            val = str(val)  # Do our best
-
-        val = val.replace("-", "")
-        if len(val) <= 8:  # Short form
-            val = ("0" * (8 - len(val))) + val + "00001000800000805F9B34FB"
-
-        self.binVal = binascii.a2b_hex(val.encode('utf-8'))
-        if len(self.binVal) != 16:
-            raise ValueError(
-                "UUID must be 16 bytes, got '%s' (len=%d)" % (val,
-                                                              len(self.binVal)))
+        4 to 8 digit hex strings, and integers
+        '''
+        self.binVal = self._uuidToBinVal(val)
+        self.val = str(self)
         self.commonName = commonName
 
+    def _uuidToBinVal(self, value):
+        if isinstance(value, int):
+            hexValue = self._intToHexString(value)
+        else:
+            hexValue = str(value) # Do our best
+            hexValue = hexValue.replace("-","")
+        
+        if len(hexValue) <= 8:  # Short form
+            hexValue = ("0" * (8 - len(hexValue))) + hexValue + \
+                        "00001000800000805F9B34FB"
+            
+        binValue = binascii.a2b_hex(hexValue.encode('utf-8'))
+        if len(binValue) != 16:
+            raise ValueError("UUID must be 16 bytes, got '%s' (len=%d)" % (hexValue,
+                                                                     len(binValue)))
+        return binValue
+    
+    def _intToHexString(self, value):
+        if (value < 0) or (value > 0xFFFFFFFF):
+            raise ValueError("Short form UUIDs must be in range 0..0xFFFFFFFF")
+        hexUUID = "%04X" % value
+        return hexUUID
+        
     def __str__(self):
         s = binascii.b2a_hex(self.binVal).decode('utf-8')
         return "-".join([s[0:8], s[8:12], s[12:16], s[16:20], s[20:32]])
